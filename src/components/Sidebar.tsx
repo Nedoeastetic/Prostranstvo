@@ -20,6 +20,7 @@ export default function Sidebar() {
   const { currentPlan, selectedObjectId, selectedZoneId, customObjectTypes } = state;
   const [sidebarTab, setSidebarTab] = useState<'library' | 'properties' | 'zones'>('library');
   const [showAddCustomModal, setShowAddCustomModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const selectedObject = currentPlan.objects.find((o) => o.id === selectedObjectId);
   const selectedZone = currentPlan.zones.find((z) => z.id === selectedZoneId);
@@ -41,6 +42,10 @@ export default function Sidebar() {
     };
     dispatch({ type: 'ADD_OBJECT', payload: newObj });
   };
+
+  const filteredTypes = (Object.keys(OBJECT_TYPE_LABELS) as ObjectType[]).filter(type =>
+    type !== 'custom' && OBJECT_TYPE_LABELS[type].toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const addCustomObject = (customType: CustomObjectType) => {
     const newObj = {
@@ -143,8 +148,20 @@ export default function Sidebar() {
         {sidebarTab === 'library' && (
           <div className="p-3">
             <p className="text-xs text-slate-400 mb-2">Нажмите для добавления на план:</p>
+
+            {/* Поисковая строка */}
+            <div className="mb-3">
+              <input
+                type="text"
+                placeholder="Поиск объектов..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-3 py-2 text-xs bg-slate-800 border border-slate-700 rounded-md text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-2">
-              {(Object.keys(OBJECT_TYPE_LABELS) as ObjectType[]).filter(type => type !== 'custom').map((type) => (
+              {filteredTypes.map((type) => (
                 <button
                   key={type}
                   onClick={() => addObject(type)}
@@ -158,6 +175,10 @@ export default function Sidebar() {
               ))}
             </div>
 
+            {filteredTypes.length === 0 && (
+              <p className="text-[10px] text-slate-500 text-center mt-3">Ничего не найдено</p>
+            )}
+
             {/* Custom objects section */}
             {customObjectTypes.length > 0 && (
               <div className="mt-4">
@@ -165,7 +186,11 @@ export default function Sidebar() {
                   <p className="text-xs text-slate-400">Пользовательские объекты:</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  {customObjectTypes.map((customType) => (
+                  {customObjectTypes
+                    .filter((customType) =>
+                      customType.name.toLowerCase().includes(searchQuery.toLowerCase())
+                    )
+                    .map((customType) => (
                     <div key={customType.id} className="relative group">
                       <button
                         onClick={() => addCustomObject(customType)}

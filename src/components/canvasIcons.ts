@@ -231,6 +231,195 @@ function drawCustom(ctx: CanvasRenderingContext2D, w: number, h: number) {
   ctx.stroke();
 }
 
+// ---- Added from the 396-line source (missing icon types) ----
+
+function drawPaymentTerminal(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.strokeRect(w * 0.2, h * 0.1, w * 0.6, h * 0.8);
+  ctx.strokeRect(w * 0.3, h * 0.2, w * 0.4, h * 0.3);
+  ctx.beginPath();
+  ctx.arc(w * 0.5, h * 0.7, w * 0.08, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+function drawMailbox(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.strokeRect(w * 0.2, h * 0.15, w * 0.6, h * 0.7);
+  ctx.beginPath();
+  ctx.moveTo(w * 0.2, h * 0.4);
+  ctx.lineTo(w * 0.8, h * 0.4);
+  ctx.stroke();
+  ctx.strokeRect(w * 0.35, h * 0.5, w * 0.3, h * 0.15);
+}
+
+function drawQueueTerminal(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.strokeRect(w * 0.25, h * 0.1, w * 0.5, h * 0.8);
+  ctx.strokeRect(w * 0.3, h * 0.2, w * 0.4, h * 0.25);
+  ctx.beginPath();
+  ctx.arc(w * 0.5, h * 0.7, w * 0.06, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+function drawInfoBoard(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.strokeRect(w * 0.1, h * 0.2, w * 0.8, h * 0.6);
+  ctx.beginPath();
+  ctx.moveTo(w * 0.2, h * 0.4);
+  ctx.lineTo(w * 0.8, h * 0.4);
+  ctx.moveTo(w * 0.2, h * 0.6);
+  ctx.lineTo(w * 0.6, h * 0.6);
+  ctx.stroke();
+}
+
+function drawMediaPanel(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.strokeRect(w * 0.1, h * 0.25, w * 0.8, h * 0.5);
+  ctx.beginPath();
+  ctx.moveTo(w * 0.5, h * 0.75);
+  ctx.lineTo(w * 0.5, h * 0.9);
+  ctx.moveTo(w * 0.35, h * 0.9);
+  ctx.lineTo(w * 0.65, h * 0.9);
+  ctx.stroke();
+}
+
+function drawBench(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.strokeRect(w * 0.05, h * 0.3, w * 0.9, h * 0.4);
+  ctx.beginPath();
+  ctx.moveTo(w * 0.15, h * 0.7);
+  ctx.lineTo(w * 0.15, h * 0.9);
+  ctx.moveTo(w * 0.85, h * 0.7);
+  ctx.lineTo(w * 0.85, h * 0.9);
+  ctx.stroke();
+}
+
+function drawDeskCutout(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.strokeRect(w * 0.1, h * 0.1, w * 0.8, h * 0.8);
+  ctx.beginPath();
+  ctx.arc(w * 0.5, h * 0.9, w * 0.2, Math.PI, 0);
+  ctx.stroke();
+}
+
+function drawChair(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.beginPath();
+  ctx.arc(w * 0.5, h * 0.5, Math.min(w, h) * 0.3, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(w * 0.5, h * 0.2);
+  ctx.lineTo(w * 0.5, h * 0.8);
+  ctx.stroke();
+}
+
+function drawComputer(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.strokeRect(w * 0.15, h * 0.15, w * 0.7, h * 0.5);
+  ctx.strokeRect(w * 0.35, h * 0.65, w * 0.3, h * 0.1);
+  ctx.strokeRect(w * 0.25, h * 0.75, w * 0.5, h * 0.1);
+}
+
+function drawCashTerminal(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.strokeRect(w * 0.2, h * 0.2, w * 0.6, h * 0.6);
+  ctx.strokeRect(w * 0.3, h * 0.3, w * 0.4, h * 0.2);
+}
+
+function drawMfpPrinter(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.strokeRect(w * 0.15, h * 0.2, w * 0.7, h * 0.6);
+  ctx.beginPath();
+  ctx.moveTo(w * 0.25, h * 0.2);
+  ctx.lineTo(w * 0.25, h * 0.1);
+  ctx.lineTo(w * 0.75, h * 0.1);
+  ctx.lineTo(w * 0.75, h * 0.2);
+  ctx.stroke();
+  ctx.strokeRect(w * 0.3, h * 0.4, w * 0.4, h * 0.2);
+}
+
+function drawLabelPrinter(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.strokeRect(w * 0.2, h * 0.25, w * 0.6, h * 0.5);
+  ctx.beginPath();
+  ctx.moveTo(w * 0.3, h * 0.25);
+  ctx.lineTo(w * 0.3, h * 0.15);
+  ctx.lineTo(w * 0.7, h * 0.15);
+  ctx.lineTo(w * 0.7, h * 0.25);
+  ctx.stroke();
+}
+
+function drawSecuritySystem(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.beginPath();
+  ctx.arc(w * 0.5, h * 0.5, Math.min(w, h) * 0.3, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(w * 0.5, h * 0.2);
+  ctx.lineTo(w * 0.5, h * 0.8);
+  ctx.moveTo(w * 0.2, h * 0.5);
+  ctx.lineTo(w * 0.8, h * 0.5);
+  ctx.stroke();
+}
+
+function drawFireAlarm(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.beginPath();
+  ctx.arc(w * 0.5, h * 0.5, Math.min(w, h) * 0.35, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(w * 0.5, h * 0.5, Math.min(w, h) * 0.15, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+function drawSocket(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.strokeRect(w * 0.2, h * 0.2, w * 0.6, h * 0.6);
+  ctx.beginPath();
+  ctx.arc(w * 0.4, h * 0.5, w * 0.05, 0, Math.PI * 2);
+  ctx.arc(w * 0.6, h * 0.5, w * 0.05, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+function drawParcelShelf(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.strokeRect(w * 0.1, h * 0.1, w * 0.8, h * 0.8);
+  ctx.beginPath();
+  ctx.moveTo(w * 0.1, h * 0.35);
+  ctx.lineTo(w * 0.9, h * 0.35);
+  ctx.moveTo(w * 0.1, h * 0.65);
+  ctx.lineTo(w * 0.9, h * 0.65);
+  ctx.moveTo(w * 0.5, h * 0.1);
+  ctx.lineTo(w * 0.5, h * 0.9);
+  ctx.stroke();
+}
+
+function drawScales(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.strokeRect(w * 0.15, h * 0.3, w * 0.7, h * 0.5);
+  ctx.beginPath();
+  ctx.moveTo(w * 0.5, h * 0.3);
+  ctx.lineTo(w * 0.5, h * 0.15);
+  ctx.stroke();
+  ctx.strokeRect(w * 0.35, h * 0.1, w * 0.3, h * 0.1);
+}
+
+function drawGoodsShelf(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.strokeRect(w * 0.1, h * 0.1, w * 0.8, h * 0.8);
+  ctx.beginPath();
+  ctx.moveTo(w * 0.1, h * 0.35);
+  ctx.lineTo(w * 0.9, h * 0.35);
+  ctx.moveTo(w * 0.1, h * 0.65);
+  ctx.lineTo(w * 0.9, h * 0.65);
+  ctx.stroke();
+}
+
+function drawInfoStand(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.strokeRect(w * 0.15, h * 0.15, w * 0.7, h * 0.7);
+  ctx.beginPath();
+  ctx.moveTo(w * 0.25, h * 0.35);
+  ctx.lineTo(w * 0.75, h * 0.35);
+  ctx.moveTo(w * 0.25, h * 0.55);
+  ctx.lineTo(w * 0.65, h * 0.55);
+  ctx.stroke();
+}
+
+function drawRamp(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.beginPath();
+  ctx.moveTo(w * 0.1, h * 0.9);
+  ctx.lineTo(w * 0.9, h * 0.9);
+  ctx.lineTo(w * 0.9, h * 0.3);
+  ctx.lineTo(w * 0.1, h * 0.9);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(w * 0.1, h * 0.9);
+  ctx.lineTo(w * 0.1, h * 0.1);
+  ctx.stroke();
+}
+
 const iconDrawers: Record<ObjectType, DrawFn> = {
   workplace: drawWorkplace,
   cash_window: drawCashWindow,
@@ -244,6 +433,26 @@ const iconDrawers: Record<ObjectType, DrawFn> = {
   safe: drawSafe,
   sorting_table: drawSortingTable,
   custom: drawCustom,
+  payment_terminal: drawPaymentTerminal,
+  mailbox: drawMailbox,
+  queue_terminal: drawQueueTerminal,
+  info_board: drawInfoBoard,
+  media_panel: drawMediaPanel,
+  bench: drawBench,
+  desk_cutout: drawDeskCutout,
+  chair: drawChair,
+  computer: drawComputer,
+  cash_terminal: drawCashTerminal,
+  mfp_printer: drawMfpPrinter,
+  label_printer: drawLabelPrinter,
+  security_system: drawSecuritySystem,
+  fire_alarm: drawFireAlarm,
+  socket: drawSocket,
+  parcel_shelf: drawParcelShelf,
+  scales: drawScales,
+  goods_shelf: drawGoodsShelf,
+  info_stand: drawInfoStand,
+  ramp: drawRamp,
 };
 
 export function drawObjectIcon(
