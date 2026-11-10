@@ -267,7 +267,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
       }
       return state;
     }
-
     case 'ADD_CUSTOM_OBJECT_TYPE': {
       const customObjectTypes = [...state.customObjectTypes, action.payload];
       try {
@@ -277,7 +276,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
       }
       return { ...state, customObjectTypes };
     }
-
     case 'DELETE_CUSTOM_OBJECT_TYPE': {
       const customObjectTypes = state.customObjectTypes.filter((t) => t.id !== action.payload);
       try {
@@ -347,7 +345,6 @@ const AppContext = createContext<{
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, null, loadInitialState);
-
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -355,7 +352,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       console.error('Failed to save state to localStorage:', error);
     }
   }, [state]);
-
   return <AppContext.Provider value={{ state, dispatch }}>{children}</AppContext.Provider>;
 }
 
