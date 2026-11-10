@@ -3,11 +3,16 @@ import { PlanData, EquipmentObject, FunctionalZone, ValidationResult, AIRecommen
 import { demoPlan } from './data/demoPlan';
 import { v4 as uuidv4 } from 'uuid';
 
-// LocalStorage keys
 const STORAGE_KEY = 'pochta_prostranstvo_state';
 const CUSTOM_OBJECTS_KEY = 'pochta_prostranstvo_custom_objects';
+const ASSISTANT_HISTORY_KEY = 'prostranstvo.assistant.history.v1';
 
-// Load custom object types from localStorage
+const EMPTY_HIGHLIGHTS = {
+  zones: [] as string[],
+  objects: [] as string[],
+  type: 'info' as const,
+};
+
 const loadCustomObjectTypes = (): CustomObjectType[] => {
   try {
     const saved = localStorage.getItem(CUSTOM_OBJECTS_KEY);
@@ -20,7 +25,6 @@ const loadCustomObjectTypes = (): CustomObjectType[] => {
   return [];
 };
 
-// Load initial state from localStorage
 const loadInitialState = (): AppState => {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -30,6 +34,8 @@ const loadInitialState = (): AppState => {
         ...initialStateTemplate,
         ...parsed,
         customObjectTypes: loadCustomObjectTypes(),
+        // Подсветка не восстанавливаем из localStorage — она сессионная
+        highlightedIds: EMPTY_HIGHLIGHTS,
       };
     }
   } catch (error) {
@@ -51,6 +57,7 @@ interface AppState {
   zoom: number;
   panOffset: { x: number; y: number };
   customObjectTypes: CustomObjectType[];
+  highlightedIds: { zones: string[]; objects: string[]; type: 'warning' | 'error' | 'info' };
 }
 
 type AppAction =
@@ -58,6 +65,8 @@ type AppAction =
   | { type: 'LOGOUT' }
   | { type: 'SET_PAGE'; payload: AppState['currentPage'] }
   | { type: 'SET_PLAN'; payload: PlanData }
+  | { type: 'CREATE_NEW_PLAN' }
+  | { type: 'RESET_TO_DEMO' }
   | { type: 'SELECT_OBJECT'; payload: string | null }
   | { type: 'SELECT_ZONE'; payload: string | null }
   | { type: 'SET_TAB'; payload: AppState['activeTab'] }
@@ -74,12 +83,14 @@ type AppAction =
   | { type: 'SET_PAN'; payload: { x: number; y: number } }
   | { type: 'APPLY_RECOMMENDATION'; payload: string }
   | { type: 'ADD_CUSTOM_OBJECT_TYPE'; payload: CustomObjectType }
-  | { type: 'DELETE_CUSTOM_OBJECT_TYPE'; payload: string };
+  | { type: 'DELETE_CUSTOM_OBJECT_TYPE'; payload: string }
+  | { type: 'SET_HIGHLIGHTS'; payload: { zones: string[]; objects: string[]; type: 'warning' | 'error' | 'info' } }
+  | { type: 'CLEAR_HIGHLIGHTS' };
 
 const initialStateTemplate: AppState = {
   isAuthenticated: false,
   currentPage: 'login',
-  currentPlan: demoPlan,
+  currentPlan: JSON.parse(JSON.stringify(demoPlan)),
   selectedObjectId: null,
   selectedZoneId: null,
   activeTab: 'editor',
@@ -89,92 +100,136 @@ const initialStateTemplate: AppState = {
   zoom: 50,
   panOffset: { x: 0, y: 0 },
   customObjectTypes: [],
+  highlightedIds: EMPTY_HIGHLIGHTS,
 };
 
 function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'LOGIN':
       return { ...state, isAuthenticated: true, currentPage: 'home' };
+
     case 'LOGOUT':
-      // Clear localStorage on logout
       try {
         localStorage.removeItem(STORAGE_KEY);
       } catch (error) {
         console.error('Failed to clear localStorage:', error);
       }
       return { ...state, isAuthenticated: false, currentPage: 'login' };
+
     case 'SET_PAGE':
       return { ...state, currentPage: action.payload };
+
     case 'SET_PLAN':
-      return { ...state, currentPlan: action.payload, selectedObjectId: null, selectedZoneId: null };
+      return {
+        ...state,
+        currentPlan: action.payload,
+        selectedObjectId: null,
+        selectedZoneId: null,
+        // не трогаем highlightedIds
+      };
+
     case 'SELECT_OBJECT':
-      return { ...state, selectedObjectId: action.payload, selectedZoneId: null };
+      return {
+        ...state,
+        selectedObjectId: action.payload,
+        selectedZoneId: null,
+        highlightedIds: EMPTY_HIGHLIGHTS,
+      };
+
     case 'SELECT_ZONE':
-      return { ...state, selectedZoneId: action.payload, selectedObjectId: null };
+      return {
+        ...state,
+        selectedZoneId: action.payload,
+        selectedObjectId: null,
+        highlightedIds: EMPTY_HIGHLIGHTS,
+      };
+
     case 'SET_TAB':
-      return { ...state, activeTab: action.payload };
+      return {
+        ...state,
+        activeTab: action.payload,
+        // highlightedIds НЕ сбрасываем — иначе анализ с ИИ не видно на редакторе
+      };
+
     case 'SET_TOOL':
       return { ...state, tool: action.payload };
+
     case 'UPDATE_OBJECT': {
       const objects = state.currentPlan.objects.map((obj) =>
-        obj.id === action.payload.id ? action.payload : obj
+        obj.id === action.payload.id ? action.payload : obj,
       );
       return {
         ...state,
         currentPlan: { ...state.currentPlan, objects, updatedAt: new Date().toISOString() },
+        highlightedIds: EMPTY_HIGHLIGHTS,
       };
     }
+
     case 'DELETE_OBJECT': {
       const objects = state.currentPlan.objects.filter((obj) => obj.id !== action.payload);
       return {
         ...state,
         currentPlan: { ...state.currentPlan, objects, updatedAt: new Date().toISOString() },
         selectedObjectId: state.selectedObjectId === action.payload ? null : state.selectedObjectId,
+        highlightedIds: EMPTY_HIGHLIGHTS,
       };
     }
+
     case 'ADD_OBJECT': {
       const objects = [...state.currentPlan.objects, action.payload];
       return {
         ...state,
         currentPlan: { ...state.currentPlan, objects, updatedAt: new Date().toISOString() },
         selectedObjectId: action.payload.id,
+        highlightedIds: EMPTY_HIGHLIGHTS,
       };
     }
+
     case 'UPDATE_ZONE': {
       const zones = state.currentPlan.zones.map((z) =>
-        z.id === action.payload.id ? action.payload : z
+        z.id === action.payload.id ? action.payload : z,
       );
       return {
         ...state,
         currentPlan: { ...state.currentPlan, zones, updatedAt: new Date().toISOString() },
+        highlightedIds: EMPTY_HIGHLIGHTS,
       };
     }
+
     case 'DELETE_ZONE': {
       const zones = state.currentPlan.zones.filter((z) => z.id !== action.payload);
       const objects = state.currentPlan.objects.map((obj) =>
-        obj.zoneId === action.payload ? { ...obj, zoneId: null } : obj
+        obj.zoneId === action.payload ? { ...obj, zoneId: null } : obj,
       );
       return {
         ...state,
         currentPlan: { ...state.currentPlan, zones, objects, updatedAt: new Date().toISOString() },
         selectedZoneId: state.selectedZoneId === action.payload ? null : state.selectedZoneId,
+        highlightedIds: EMPTY_HIGHLIGHTS,
       };
     }
+
     case 'ADD_ZONE': {
       const zones = [...state.currentPlan.zones, action.payload];
       return {
         ...state,
         currentPlan: { ...state.currentPlan, zones, updatedAt: new Date().toISOString() },
+        highlightedIds: EMPTY_HIGHLIGHTS,
       };
     }
+
     case 'SET_VALIDATION':
       return { ...state, validationResults: action.payload };
+
     case 'SET_AI_RECOMMENDATIONS':
       return { ...state, aiRecommendations: action.payload };
+
     case 'SET_ZOOM':
       return { ...state, zoom: action.payload };
+
     case 'SET_PAN':
       return { ...state, panOffset: action.payload };
+
     case 'APPLY_RECOMMENDATION': {
       const rec = state.aiRecommendations.find((r) => r.id === action.payload);
       if (!rec || !rec.action) return state;
@@ -191,21 +246,23 @@ function appReducer(state: AppState, action: AppAction): AppState {
             objects: [...state.currentPlan.objects, newObj],
             updatedAt: new Date().toISOString(),
           },
-          selectedObjectId: newId, // Выделяем новый объект
-          activeTab: 'editor', // Переключаемся на редактор
+          selectedObjectId: newId,
+          activeTab: 'editor',
+          highlightedIds: EMPTY_HIGHLIGHTS,
         };
       }
       if (rec.action.type === 'move_object') {
         const objects = state.currentPlan.objects.map((obj) =>
           obj.id === rec.action!.data.id
             ? { ...obj, x: rec.action!.data.x, y: rec.action!.data.y }
-            : obj
+            : obj,
         );
         return {
           ...state,
           currentPlan: { ...state.currentPlan, objects, updatedAt: new Date().toISOString() },
-          selectedObjectId: rec.action.data.id, // Выделяем перемещённый объект
-          activeTab: 'editor', // Переключаемся на редактор
+          selectedObjectId: rec.action.data.id,
+          activeTab: 'editor',
+          highlightedIds: EMPTY_HIGHLIGHTS,
         };
       }
       return state;
@@ -228,6 +285,54 @@ function appReducer(state: AppState, action: AppAction): AppState {
       }
       return { ...state, customObjectTypes };
     }
+
+    case 'RESET_TO_DEMO':
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(ASSISTANT_HISTORY_KEY);
+      } catch (error) {
+        console.error('Failed to clear localStorage:', error);
+      }
+      return {
+        ...initialStateTemplate,
+        customObjectTypes: state.customObjectTypes,
+        highlightedIds: EMPTY_HIGHLIGHTS,
+      };
+
+    case 'SET_HIGHLIGHTS':
+      return { ...state, highlightedIds: action.payload };
+
+    case 'CLEAR_HIGHLIGHTS':
+      return { ...state, highlightedIds: EMPTY_HIGHLIGHTS };
+
+    case 'CREATE_NEW_PLAN':
+      return {
+        ...state,
+        currentPlan: {
+          id: `plan-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          name: 'Новый чертёж',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          room: {
+            id: `room-${Date.now()}`,
+            name: 'Зал',
+            width: 10,
+            height: 10,
+            walls: [
+              { x: 0, y: 0 },
+              { x: 10, y: 0 },
+              { x: 10, y: 10 },
+              { x: 0, y: 10 },
+            ],
+          },
+          zones: [],
+          objects: [],
+        },
+        selectedObjectId: null,
+        selectedZoneId: null,
+        highlightedIds: EMPTY_HIGHLIGHTS,
+      };
+
     default:
       return state;
   }
@@ -240,8 +345,6 @@ const AppContext = createContext<{
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, null, loadInitialState);
-  
-  // Save state to localStorage on every change
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -249,7 +352,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       console.error('Failed to save state to localStorage:', error);
     }
   }, [state]);
-  
   return <AppContext.Provider value={{ state, dispatch }}>{children}</AppContext.Provider>;
 }
 
@@ -259,14 +361,18 @@ export function useAppState() {
   return context;
 }
 
-// Utility functions
-export function pointInPolygon(point: { x: number; y: number }, polygon: { x: number; y: number }[]): boolean {
+export function pointInPolygon(
+  point: { x: number; y: number },
+  polygon: { x: number; y: number }[],
+): boolean {
   let inside = false;
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const xi = polygon[i].x, yi = polygon[i].y;
-    const xj = polygon[j].x, yj = polygon[j].y;
-    const intersect = ((yi > point.y) !== (yj > point.y)) &&
-      (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
+    const xi = polygon[i].x,
+      yi = polygon[i].y;
+    const xj = polygon[j].x,
+      yj = polygon[j].y;
+    const intersect =
+      yi > point.y !== yj > point.y && point.x < ((xj - xi) * (point.y - yi)) / (yj - yi) + xi;
     if (intersect) inside = !inside;
   }
   return inside;
@@ -410,7 +516,7 @@ export function generateAIRecommendations(plan: PlanData): AIRecommendation[] {
           height: 0.5,
           rotation: 0,
           zoneId: waitingZone.id,
-          attributes: { 'Тип': 'Кресло с подлокотниками' },
+          attributes: { Тип: 'Кресло с подлокотниками' },
           color: '#DB2777',
         },
       },
@@ -442,7 +548,7 @@ export function generateAIRecommendations(plan: PlanData): AIRecommendation[] {
             height: 0.5,
             rotation: 0,
             zoneId: storageZone.id,
-            attributes: { 'Вместимость': '40 посылок', 'Ярусы': '4' },
+            attributes: { Вместимость: '40 посылок', Ярусы: '4' },
             color: '#D97706',
           },
         },
@@ -501,7 +607,7 @@ export function generateAIRecommendations(plan: PlanData): AIRecommendation[] {
           height: 0.8,
           rotation: 0,
           zoneId: 'zone-service',
-          attributes: { 'Сотрудник': 'Не назначен', 'ПК': 'Не укомплектовано' },
+          attributes: { Сотрудник: 'Не назначен', ПК: 'Не укомплектовано' },
           color: '#2563EB',
         },
       },

@@ -22,7 +22,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
 
       {/* Title */}
       <div className="pt-20 pb-6 lg:pb-8 px-8 lg:px-16 text-white text-4xl lg:text-6xl font-light" style={{ fontFamily: 'Playfair Display, serif' }}>
-        Почта.Пространство
+        Твоё.Пространство
       </div>
 
       {/* Login card */}

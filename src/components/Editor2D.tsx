@@ -3,30 +3,58 @@ import { useAppState, pointInPolygon, getObjectCenter } from '../store';
 import { EquipmentObject } from '../types';
 import { drawObjectIcon } from './canvasIcons';
 
+const HIGHLIGHT_COLORS = {
+  error: '#EF4444',
+  warning: '#F59E0B',
+  info: '#3B82F6',
+} as const;
+
 export default function Editor2D() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { state, dispatch } = useAppState();
-  const { currentPlan, selectedObjectId, selectedZoneId, zoom, panOffset } = state;
+  const {
+    currentPlan,
+    selectedObjectId,
+    selectedZoneId,
+    zoom,
+    panOffset,
+    highlightedIds,
+  } = state;
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
   const [isDraggingZone, setIsDraggingZone] = useState(false);
-  const [zoneDragStart, setZoneDragStart] = useState<{ x: number; y: number; points: { x: number; y: number }[] } | null>(null);
+  const [zoneDragStart, setZoneDragStart] = useState<{
+    x: number;
+    y: number;
+    points: { x: number; y: number }[];
+  } | null>(null);
 
   const scale = zoom; // pixels per meter
 
-  const toScreen = useCallback((x: number, y: number) => ({
-    x: x * scale + panOffset.x + 40,
-    y: y * scale + panOffset.y + 40,
-  }), [scale, panOffset]);
+  const highlightType = highlightedIds?.type ?? 'info';
+  const highlightColor = HIGHLIGHT_COLORS[highlightType] ?? HIGHLIGHT_COLORS.info;
+  const highlightedZoneSet = new Set(highlightedIds?.zones ?? []);
+  const highlightedObjectSet = new Set(highlightedIds?.objects ?? []);
 
-  const toWorld = useCallback((sx: number, sy: number) => ({
-    x: (sx - panOffset.x - 40) / scale,
-    y: (sy - panOffset.y - 40) / scale,
-  }), [scale, panOffset]);
+  const toScreen = useCallback(
+    (x: number, y: number) => ({
+      x: x * scale + panOffset.x + 40,
+      y: y * scale + panOffset.y + 40,
+    }),
+    [scale, panOffset],
+  );
+
+  const toWorld = useCallback(
+    (sx: number, sy: number) => ({
+      x: (sx - panOffset.x - 40) / scale,
+      y: (sy - panOffset.y - 40) / scale,
+    }),
+    [scale, panOffset],
+  );
 
   // Resize observer
   useEffect(() => {
@@ -94,6 +122,9 @@ export default function Editor2D() {
 
     // Draw zones
     currentPlan.zones.forEach((zone) => {
+      const isHighlighted = highlightedZoneSet.has(zone.id);
+      const isSelected = zone.id === selectedZoneId;
+
       ctx.beginPath();
       zone.points.forEach((p, i) => {
         const sp = toScreen(p.x, p.y);
@@ -101,11 +132,35 @@ export default function Editor2D() {
         else ctx.lineTo(sp.x, sp.y);
       });
       ctx.closePath();
-      ctx.fillStyle = zone.color + '30';
+
+      // Fill: stronger when highlighted
+      if (isHighlighted) {
+        ctx.fillStyle = highlightColor + '40';
+      } else {
+        ctx.fillStyle = (zone.color || '#475569') + '30';
+      }
       ctx.fill();
-      ctx.strokeStyle = zone.id === selectedZoneId ? '#ffffff' : zone.color;
-      ctx.lineWidth = zone.id === selectedZoneId ? 2.5 : 1.5;
-      ctx.setLineDash(zone.id === selectedZoneId ? [] : [5, 3]);
+
+      // Stroke priority: selected > highlighted > default
+      if (isSelected) {
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([]);
+      } else if (isHighlighted) {
+        ctx.strokeStyle = highlightColor;
+        ctx.lineWidth = 3;
+        ctx.setLineDash([]);
+        // soft outer glow
+        ctx.save();
+        ctx.shadowColor = highlightColor;
+        ctx.shadowBlur = 12;
+        ctx.stroke();
+        ctx.restore();
+      } else {
+        ctx.strokeStyle = zone.color || '#475569';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([5, 3]);
+      }
       ctx.stroke();
       ctx.setLineDash([]);
 
@@ -113,16 +168,16 @@ export default function Editor2D() {
       const centerX = zone.points.reduce((s, p) => s + p.x, 0) / zone.points.length;
       const centerY = zone.points.reduce((s, p) => s + p.y, 0) / zone.points.length;
       const labelPos = toScreen(centerX, centerY);
-      ctx.fillStyle = zone.color;
+      ctx.fillStyle = isHighlighted ? highlightColor : zone.color || '#94a3b8';
       ctx.font = 'bold 11px Inter, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(zone.name, labelPos.x, labelPos.y);
 
       // Zone dimensions (top-left corner)
-      const minX = Math.min(...zone.points.map(p => p.x));
-      const maxX = Math.max(...zone.points.map(p => p.x));
-      const minY = Math.min(...zone.points.map(p => p.y));
-      const maxY = Math.max(...zone.points.map(p => p.y));
+      const minX = Math.min(...zone.points.map((p) => p.x));
+      const maxX = Math.max(...zone.points.map((p) => p.x));
+      const minY = Math.min(...zone.points.map((p) => p.y));
+      const maxY = Math.max(...zone.points.map((p) => p.y));
       const width = maxX - minX;
       const height = maxY - minY;
       const dimPos = toScreen(minX, minY);
@@ -138,6 +193,7 @@ export default function Editor2D() {
       const w = obj.width * scale;
       const h = obj.height * scale;
       const isSelected = obj.id === selectedObjectId;
+      const isHighlighted = highlightedObjectSet.has(obj.id);
 
       ctx.save();
       const cx = pos.x + w / 2;
@@ -147,11 +203,26 @@ export default function Editor2D() {
       ctx.translate(-w / 2, -h / 2);
 
       // Object body
-      ctx.fillStyle = obj.color + (isSelected ? 'DD' : '99');
+      const baseColor = obj.color || '#64748B';
+      ctx.fillStyle = baseColor + (isSelected ? 'DD' : isHighlighted ? 'CC' : '99');
       ctx.fillRect(0, 0, w, h);
-      ctx.strokeStyle = isSelected ? '#ffffff' : obj.color;
-      ctx.lineWidth = isSelected ? 2.5 : 1.5;
+
+      if (isSelected) {
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2.5;
+        ctx.shadowBlur = 0;
+      } else if (isHighlighted) {
+        ctx.strokeStyle = highlightColor;
+        ctx.lineWidth = 3;
+        ctx.shadowColor = highlightColor;
+        ctx.shadowBlur = 10;
+      } else {
+        ctx.strokeStyle = baseColor;
+        ctx.lineWidth = 1.5;
+        ctx.shadowBlur = 0;
+      }
       ctx.strokeRect(0, 0, w, h);
+      ctx.shadowBlur = 0;
 
       // Draw icon
       drawObjectIcon(ctx, obj.type, w, h, '#ffffff');
@@ -159,9 +230,9 @@ export default function Editor2D() {
       ctx.restore();
 
       // Object label
-      if (isSelected || scale > 35) {
-        ctx.fillStyle = '#e2e8f0';
-        ctx.font = '9px Inter, sans-serif';
+      if (isSelected || isHighlighted || scale > 35) {
+        ctx.fillStyle = isHighlighted && !isSelected ? highlightColor : '#e2e8f0';
+        ctx.font = isHighlighted || isSelected ? 'bold 9px Inter, sans-serif' : '9px Inter, sans-serif';
         ctx.textAlign = 'center';
         const labelY = pos.y + h + 12;
         ctx.fillText(obj.name.substring(0, 20), pos.x + w / 2, labelY);
@@ -193,7 +264,48 @@ export default function Editor2D() {
     ctx.lineTo(scaleBarX + scale, scaleBarY + 5);
     ctx.stroke();
 
-  }, [currentPlan, selectedObjectId, selectedZoneId, zoom, panOffset, canvasSize, scale, toScreen]);
+    // Highlight legend (only when something is highlighted)
+    if (highlightedZoneSet.size > 0 || highlightedObjectSet.size > 0) {
+      const label =
+        highlightType === 'error'
+          ? 'Ошибка / нарушение нормы'
+          : highlightType === 'warning'
+            ? 'Рекомендация'
+            : 'Акцент';
+      ctx.fillStyle = highlightColor + '22';
+      ctx.strokeStyle = highlightColor;
+      ctx.lineWidth = 1.5;
+      const boxW = 200;
+      const boxH = 28;
+      const boxX = 12;
+      const boxY = 12;
+      ctx.beginPath();
+      ctx.roundRect?.(boxX, boxY, boxW, boxH, 6);
+      if (!ctx.roundRect) {
+        ctx.rect(boxX, boxY, boxW, boxH);
+      }
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = highlightColor;
+      ctx.font = 'bold 11px Inter, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(label, boxX + 10, boxY + 18);
+    }
+  }, [
+    currentPlan,
+    selectedObjectId,
+    selectedZoneId,
+    zoom,
+    panOffset,
+    canvasSize,
+    scale,
+    toScreen,
+    highlightedIds,
+    highlightColor,
+    highlightType,
+    highlightedZoneSet,
+    highlightedObjectSet,
+  ]);
 
   // Mouse handlers
   const handleMouseDown = (e: React.MouseEvent) => {

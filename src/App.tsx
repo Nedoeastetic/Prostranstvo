@@ -21,13 +21,24 @@ function AppContent() {
   if (state.currentPage === 'home') {
     return (
       <HomePage
-        onCreateProject={() => dispatch({ type: 'SET_PAGE', payload: 'editor' })}
-        onOpenProject={() => dispatch({ type: 'SET_PAGE', payload: 'editor' })}
-        onLogout={() => dispatch({ type: 'LOGOUT' })}
-        onImportProject={(plan) => {
-          dispatch({ type: 'SET_PLAN', payload: plan });
+        onCreateProject={() => {
+          dispatch({ type: 'CREATE_NEW_PLAN' });
           dispatch({ type: 'SET_PAGE', payload: 'editor' });
         }}
+        onOpenProject={() => dispatch({ type: 'SET_PAGE', payload: 'editor' })}
+        onImportProject={(plan) => {
+          // Создаём глубокую копию и новый ID, чтобы импорт не перезаписывал старые данные
+          const newPlan = {
+            ...plan,
+            id: `plan-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            name: plan.name ? `${plan.name} (Копия)` : 'Импортированный чертёж',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          dispatch({ type: 'SET_PLAN', payload: newPlan });
+          dispatch({ type: 'SET_PAGE', payload: 'editor' });
+        }}
+        onLogout={() => dispatch({ type: 'LOGOUT' })}
       />
     );
   }
