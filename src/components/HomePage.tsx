@@ -115,7 +115,7 @@ export default function HomePage({ onCreateProject, onOpenProject, onLogout, onI
       >
         {/* Логотип */}
         <div className="text-white text-xl font-black uppercase tracking-wide" style={{ fontFamily: 'Inter, sans-serif' }}>
-          ПОЧТА.ПРОСТРАНСТВО
+          ТВОЁ.ПРОСТРАНСТВО
         </div>
 
         {/* Навигация */}

@@ -13,6 +13,9 @@ import {
   LogOut,
 } from 'lucide-react';
 
+/** Тот же ключ, что в AIAssistant.tsx */
+const ASSISTANT_HISTORY_KEY = 'prostranstvo.assistant.history.v1';
+
 export default function TopBar() {
   const { state, dispatch } = useAppState();
   const { activeTab, currentPlan } = state;
@@ -59,6 +62,27 @@ export default function TopBar() {
     const recs = generateAIRecommendations(currentPlan);
     dispatch({ type: 'SET_AI_RECOMMENDATIONS', payload: recs });
     dispatch({ type: 'SET_TAB', payload: 'ai' });
+  };
+
+  const handleReset = () => {
+    if (
+      !window.confirm(
+        '⚠️ Это удалит все текущие изменения, вернёт чистый чертёж и очистит чат ИИ-ассистента. Продолжить?',
+      )
+    ) {
+      return;
+    }
+
+    // История чата ИИ
+    try {
+      localStorage.removeItem(ASSISTANT_HISTORY_KEY);
+    } catch {
+      /* ignore */
+    }
+
+    dispatch({ type: 'CLEAR_HIGHLIGHTS' });
+    dispatch({ type: 'RESET_TO_DEMO' });
+    window.location.reload();
   };
 
   const tabs = [
@@ -120,6 +144,15 @@ export default function TopBar() {
           <Upload size={14} />
           Загрузить
         </button>
+
+        <button
+          onClick={handleReset}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-300 border border-red-900/50 hover:bg-red-950/40 transition-colors"
+          title="Сбросить чертёж и чат ИИ-ассистента"
+        >
+          🗑 Сбросить
+        </button>
+
         <div className="w-px h-6 bg-white/20 mx-1" />
         <button
           onClick={() => dispatch({ type: 'SET_PAGE', payload: 'home' })}
